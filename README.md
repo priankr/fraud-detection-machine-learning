@@ -16,3 +16,6 @@ The objective is to classify the data transactions as either legitimate (class 0
 - Random Forest
 - K Nearest Neighbours
 - K Means Clustering
+
+#### See this machine learning project on Kaggle:
+https://www.kaggle.com/priankravichandar/credit-card-fraud-detection-machine-learning
