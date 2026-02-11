@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Credit Card Fraud Detection | ML Analysis</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0f172a;--surface:#1e293b;--surface2:#334155;--border:#475569;
+    --text:#ffffff;--text-muted:#94a3b8;--text-dim:#64748b;
+    --accent:#fb923c;--accent-dim:#ea580c;
+    --red:#f87171;--orange:#fb923c;--amber:#fbbf24;--yellow:#fde047;
+    --radius:12px;
+  }
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+  .container{max-width:1200px;margin:0 auto;padding:0 24px}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:rgba(15,23,42,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--surface2);padding:14px 0}
+  nav .container{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+  nav .logo{font-size:1.1rem;font-weight:700;color:var(--accent);letter-spacing:-.02em}
+  nav .links{display:flex;gap:8px;flex-wrap:wrap}
+  nav .links a{color:var(--text);text-decoration:none;font-size:.8rem;padding:4px 10px;border-radius:6px;transition:all .2s}
+  nav .links a:hover{color:var(--text);background:var(--surface)}
+
+  /* HERO */
+  .hero{padding:64px 0 32px;text-align:center}
+  .hero h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;letter-spacing:-.03em;color:var(--orange)}
+  .hero p{color:var(--text);font-size:1.05rem;max-width:800px;margin:12px auto 0}
+  .hero .meta{margin-top:16px;font-size:.8rem;color:var(--text)}
+  .hero .meta a{color:var(--accent);text-decoration:none}
+
+  /* STAT CARDS */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:24px 0}
+  .stat{background:var(--surface);border:1px solid var(--surface2);border-radius:var(--radius);padding:24px;text-align:center}
+  .stat .value{font-size:2rem;font-weight:800;letter-spacing:-.03em}
+  .stat .label{font-size:.8rem;color:var(--text);margin-top:4px}
+  .stat.fraud .value{color:var(--red)}
+  .stat.model .value{color:var(--amber)}
+  .stat.metric .value{color:var(--accent)}
+
+  /* SECTIONS */
+  section{padding:36px 0}
+  section h2{font-size:1.5rem;font-weight:700;margin-bottom:8px;letter-spacing:-.02em}
+  section .subtitle{color:var(--text);font-size:.95rem;margin-bottom:24px}
+  section .prose{color:var(--text);font-size:.9rem;line-height:1.7;margin-bottom:20px}
+
+  /* CARDS / CHART WRAPPERS */
+  .card{background:var(--surface);border:1px solid var(--surface2);border-radius:var(--radius);padding:24px;margin-bottom:16px}
+  .card h3{font-size:1.05rem;font-weight:600;margin-bottom:16px;color:var(--text)}
+  .chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr));gap:16px}
+  .chart-wrap{position:relative;width:100%;aspect-ratio:16/10}
+  .chart-wrap.tall{aspect-ratio:16/12}
+
+  /* TABLE */
+  .tbl{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:16px}
+  .tbl th,.tbl td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--surface2)}
+  .tbl th{color:var(--text);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em}
+  .tbl td{font-variant-numeric:tabular-nums}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl .best{color:var(--amber);font-weight:600}
+  .tbl .winner-row{background:rgba(251,191,36,.06)}
+
+  /* INSIGHT BOXES */
+  .insight{background:rgba(251,146,60,.08);border-left:3px solid var(--accent);border-radius:0 var(--radius) var(--radius) 0;padding:16px 20px;margin:20px 0;font-size:.9rem;color:var(--text)}
+  .insight strong{color:var(--text)}
+
+  /* TAKEAWAYS */
+  .takeaways{list-style:none;display:grid;gap:12px}
+  .takeaways li{background:var(--surface);border:1px solid var(--surface2);border-radius:var(--radius);padding:16px 20px;font-size:.9rem;line-height:1.5}
+  .takeaways li strong{color:var(--accent)}
+  .takeaways li::before{content:"";display:inline-block;width:6px;height:6px;background:var(--accent);border-radius:50%;margin-right:10px;vertical-align:middle}
+
+  /* FOOTER */
+  footer{border-top:1px solid var(--surface2);padding:32px 0;text-align:center;color:var(--text);font-size:.8rem}
+  footer a{color:var(--accent);text-decoration:none}
+
+  /* RESPONSIVE */
+  @media(max-width:640px){
+    .stats{grid-template-columns:1fr 1fr}
+    .stat .value{font-size:1.5rem}
+    section{padding:36px 0}
+    .card{padding:16px}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="logo">Fraud Detection ML</div>
+    <div class="links">
+      <a href="#data">Data</a>
+      <a href="#patterns">Patterns</a>
+      <a href="#models">Models</a>
+      <a href="#curves">Curves</a>
+      <a href="#features">Features</a>
+      <a href="#takeaways">Takeaways</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <h1>Credit Card Fraud Detection</h1>
+    <p>Machine learning analysis of 284,807 credit card transactions to detect the 0.17% that are fraudulent. Comparing supervised and unsupervised approaches on highly imbalanced data.</p>
+    <div class="meta">Dataset: <a href="https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud" target="_blank" rel="noopener">Kaggle &mdash; ULB Machine Learning Group</a> &middot; European cardholders, Sept 2013</div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="stats">
+    <div class="stat"><div class="value">284,807</div><div class="label">Total Transactions</div></div>
+    <div class="stat fraud"><div class="value">492</div><div class="label">Fraudulent (0.173%)</div></div>
+    <div class="stat model"><div class="value">Random Forest</div><div class="label">Best Model (by AUPRC)</div></div>
+    <div class="stat metric"><div class="value">0.8553</div><div class="label">Best AUPRC Score</div></div>
+  </div>
+</div>
+
+<!-- DATA SECTION -->
+<section id="data">
+  <div class="container">
+    <h2>The Imbalance Problem</h2>
+    <p class="subtitle">The central challenge of this dataset is extreme class imbalance &mdash; for every fraudulent transaction, there are roughly 578 legitimate ones.</p>
+    <p class="prose">Only 492 out of 284,807 transactions are fraudulent (0.173%). This means a model that simply labels <em>every</em> transaction as legitimate would be "99.8% accurate" while catching zero fraud. Accuracy is therefore a misleading metric for this problem. Instead, we evaluate models using precision (of the transactions flagged as fraud, how many actually are?), recall (of all actual fraud cases, how many did we catch?), and AUPRC (Area Under the Precision-Recall Curve) &mdash; a single number summarizing the precision-recall tradeoff where higher is better.</p>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Class Distribution</h3>
+        <div class="chart-wrap"><canvas id="classChart"></canvas></div>
+        <div class="insight">The doughnut chart shows the massive imbalance: <strong>284,315 legitimate transactions</strong> vs. only <strong>492 fraudulent ones</strong>. The fraud slice is so small it is barely visible at this scale.</div>
+      </div>
+      <div class="card">
+        <h3>Addressing Imbalance with SMOTE</h3>
+        <div class="chart-wrap"><canvas id="smoteChart"></canvas></div>
+        <div class="insight"><strong>SMOTE</strong> (Synthetic Minority Oversampling Technique) addresses this by generating new synthetic fraud examples. It picks a real fraud transaction, finds its nearest neighbors among other fraud cases, and creates a new example between them. This gives the model enough fraud examples to learn meaningful patterns. SMOTE is applied <strong>only to the training data</strong> &mdash; the test set stays untouched so it reflects the real-world class distribution.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PATTERNS SECTION -->
+<section id="patterns">
+  <div class="container">
+    <h2>Fraud Patterns</h2>
+    <p class="subtitle">Before building any models, we explore the data to understand how fraudulent transactions differ from legitimate ones in amount, timing, and feature patterns.</p>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Transaction Amount Distribution</h3>
+        <div class="chart-wrap"><canvas id="amountChart"></canvas></div>
+        <div class="insight"><strong>Fraudulent transactions tend to be smaller.</strong> The median fraud amount is $9.25, much lower than the $22.00 median for legitimate transactions. The majority of fraud occurs under $100, while the largest fraud is around $2,125 compared to $25,691 for legitimate transactions. This makes intuitive sense: fraudsters often test with small amounts first to see if a stolen card works, and smaller transactions are less likely to trigger manual review.</div>
+      </div>
+      <div class="card">
+        <h3>Fraud Rate by Hour of Day</h3>
+        <div class="chart-wrap"><canvas id="hourlyChart"></canvas></div>
+        <div class="insight"><strong>The fraud rate spikes during off-peak hours</strong>, peaking sharply at 2 AM (1.7%) with elevated rates through 3&ndash;5 AM (highlighted in red). Legitimate transactions drop off during nighttime hours, reflecting normal consumer behavior, but the <em>proportion</em> of transactions that turn out to be fraudulent is much higher during these quiet periods. This suggests fraudsters may prefer hours when monitoring is reduced and response times are slower.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Feature Correlation with Fraud</h3>
+      <div class="chart-wrap tall"><canvas id="corrChart"></canvas></div>
+      <div class="insight">Since most features are anonymized via PCA, we can't interpret them directly &mdash; but we can identify which ones are most statistically related to fraud. <strong>V17</strong> and <strong>V14</strong> have the strongest negative correlations: when these values decrease, fraud becomes more likely. <strong>V11</strong> and <strong>V4</strong> have positive correlations: higher values suggest fraud. Most individual correlations are relatively weak (below |0.3|), meaning no single feature reliably indicates fraud on its own. This is exactly why we need machine learning &mdash; models can combine multiple weak signals into a strong overall prediction, like diagnosing an illness from a combination of symptoms rather than any single one.</div>
+    </div>
+  </div>
+</section>
+
+<!-- MODELS SECTION -->
+<section id="models">
+  <div class="container">
+    <h2>Model Comparison</h2>
+    <p class="subtitle">We trained three supervised models on SMOTE-balanced data, each with different strengths, plus an unsupervised Isolation Forest for anomaly detection.</p>
+    <p class="prose"><strong>Logistic Regression</strong> finds a linear decision boundary between classes &mdash; it serves as a fast, interpretable baseline. <strong>Random Forest</strong> combines many decision trees through majority voting, handling non-linear patterns while resisting overfitting. <strong>XGBoost</strong> builds trees sequentially, each correcting the previous one's mistakes &mdash; it is considered state-of-the-art for tabular data. <strong>Isolation Forest</strong> takes a different approach entirely: instead of learning from labeled fraud examples, it learns what "normal" looks like and flags anything unusual as anomalous.</p>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>AUPRC &amp; ROC-AUC Scores</h3>
+        <div class="chart-wrap"><canvas id="metricsChart"></canvas></div>
+        <div class="insight">All three models achieve strong ROC-AUC scores (above 0.97), but their <strong>AUPRC scores differ more meaningfully</strong>. AUPRC is the more honest metric for imbalanced data because it focuses on how well the model identifies the rare fraud class. Random Forest leads with 0.8553.</div>
+      </div>
+      <div class="card">
+        <h3>Fraud Detection Results (98 fraud in test set)</h3>
+        <div class="chart-wrap"><canvas id="detectionChart"></canvas></div>
+        <div class="insight">This chart reveals the fundamental tradeoff in fraud detection: <strong>catching more fraud comes at the cost of more false alarms.</strong> Note the log scale &mdash; Logistic Regression's 1,534 false alarms dwarfs Random Forest's 14. In practice, investigating a false alarm costs time and resources, but missing a real fraud case means direct financial loss.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Detailed Model Performance</h3>
+      <table class="tbl">
+        <thead><tr><th>Model</th><th>ROC-AUC</th><th>AUPRC</th><th>Fraud Caught</th><th>False Alarms</th><th>Missed Fraud</th><th>Precision</th><th>Recall</th></tr></thead>
+        <tbody>
+          <tr class="winner-row"><td class="best">Random Forest</td><td class="best">0.9779</td><td class="best">0.8553</td><td>79 / 98 (80.6%)</td><td>14</td><td>19</td><td>84.95%</td><td>80.61%</td></tr>
+          <tr><td>XGBoost</td><td>0.9761</td><td>0.8477</td><td>86 / 98 (87.8%)</td><td>142</td><td>12</td><td>37.72%</td><td>87.76%</td></tr>
+          <tr><td>Logistic Regression</td><td>0.9706</td><td>0.7281</td><td>90 / 98 (91.8%)</td><td>1,534</td><td>8</td><td>5.54%</td><td>91.84%</td></tr>
+          <tr><td>Isolation Forest <span style="font-size:.75rem;opacity:.7">(unsupervised)</span></td><td colspan="2">N/A</td><td>34 / 98 (34.7%)</td><td>70</td><td>64</td><td>32.69%</td><td>34.69%</td></tr>
+        </tbody>
+      </table>
+      <div class="insight"><strong>Random Forest</strong> achieves the best precision-recall balance: 84.95% precision means that when it flags a transaction as fraud, it is correct 85 times out of 100, with only 14 false alarms total. Logistic Regression catches the most fraud (91.8%) but with extremely low precision (5.54%), meaning it generates over 100 false alarms for every real fraud it catches. The Isolation Forest, working without any fraud labels, still manages to catch about a third of fraud cases &mdash; demonstrating that anomaly detection can find fraudulent patterns purely from what "normal" looks like.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CURVES SECTION -->
+<section id="curves">
+  <div class="container">
+    <h2>Performance Curves</h2>
+    <p class="subtitle">Rather than evaluating models at a single threshold, these curves show how each model performs across all possible classification thresholds.</p>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>ROC Curves</h3>
+        <div class="chart-wrap"><canvas id="rocChart"></canvas></div>
+        <div class="insight">The ROC curve plots the True Positive Rate (fraud caught) against the False Positive Rate (false alarms) at every possible threshold. A perfect model hugs the top-left corner; the dashed diagonal represents random guessing (AUC = 0.5). All three models perform well here, but <strong>ROC-AUC can be overly optimistic when classes are highly imbalanced</strong> &mdash; a model can appear strong on this metric while still producing many false positives in absolute terms.</div>
+      </div>
+      <div class="card">
+        <h3>Precision-Recall Curves</h3>
+        <div class="chart-wrap"><canvas id="prChart"></canvas></div>
+        <div class="insight">The Precision-Recall curve provides a more honest picture for imbalanced data. It focuses specifically on the fraud class: <strong>Recall</strong> (x-axis) shows how many fraud cases the model found, while <strong>Precision</strong> (y-axis) shows how accurate its fraud flags are. The dashed baseline represents random flagging (precision equal to the 0.17% fraud rate). Random Forest maintains high precision even at higher recall levels, which is why it achieves the best AUPRC.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Threshold Optimization (Random Forest)</h3>
+      <div class="chart-wrap tall"><canvas id="thresholdChart"></canvas></div>
+      <div class="insight">By default, models use a 0.5 probability threshold: if the predicted fraud probability exceeds 50%, the transaction is flagged. But this default is rarely optimal. As the threshold moves left (lower), recall increases (more fraud caught) but precision drops (more false alarms). As it moves right (higher), precision improves but recall falls. The <strong>F1 score</strong> (yellow line) balances both metrics and peaks at a threshold of <strong>0.72</strong>, achieving 95.0% precision and 77.6% recall. In practice, the right threshold depends on the relative cost of false positives vs. false negatives &mdash; a decision best made with business stakeholders.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES SECTION -->
+<section id="features">
+  <div class="container">
+    <h2>Feature Importance</h2>
+    <p class="subtitle">Even though most features are anonymized via PCA, we can still identify which ones the models rely on most for detecting fraud.</p>
+    <p class="prose">Since the original features (merchant category, geographic distance, purchase frequency, etc.) have been transformed into anonymous principal components, we cannot directly interpret what V14 or V17 "mean." However, feature importance scores reveal which transformed features carry the strongest fraud signal. If both models independently agree on the same features, that gives us confidence that these capture genuine fraud patterns rather than noise.</p>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Random Forest</h3>
+        <div class="chart-wrap tall"><canvas id="rfImpChart"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>XGBoost</h3>
+        <div class="chart-wrap tall"><canvas id="xgbImpChart"></canvas></div>
+      </div>
+    </div>
+    <div class="insight"><strong>V14</strong> dominates in both models &mdash; in XGBoost it accounts for over 55% of the total importance. V10, V4, V17, and V12 also rank highly across both. These are the same features that showed the strongest correlations with fraud in the exploratory analysis above, confirming they capture genuine patterns. The <strong>Amount</strong> and <strong>Hour</strong> engineered features also appear in XGBoost's rankings, confirming that our feature engineering added useful information despite their weak individual correlations. The fact that a small number of features dominate suggests that fraud has a <strong>distinct and recognizable statistical signature</strong> in this transaction data.</div>
+  </div>
+</section>
+
+<!-- TAKEAWAYS -->
+<section id="takeaways">
+  <div class="container">
+    <h2>Key Takeaways</h2>
+    <ul class="takeaways">
+      <li><strong>Class imbalance demands careful handling.</strong> With fraud at 0.17%, SMOTE oversampling on training data allows models to learn fraud patterns without discarding 99.8% of the data.</li>
+      <li><strong>The right evaluation metric matters.</strong> Accuracy is misleading for imbalanced data. AUPRC and precision-recall analysis provide an honest picture of performance.</li>
+      <li><strong>Ensemble methods excel.</strong> Random Forest and XGBoost outperform Logistic Regression by capturing complex, non-linear patterns in the PCA-transformed features.</li>
+      <li><strong>Anomaly detection works without labels.</strong> Isolation Forest identifies some fraud without any labeled examples &mdash; valuable when labeled data is scarce or for detecting novel fraud patterns.</li>
+      <li><strong>Threshold tuning is essential.</strong> The default 0.5 threshold is suboptimal. At 0.72, Random Forest achieves 95% precision with 77.6% recall &mdash; a better real-world tradeoff.</li>
+      <li><strong>A small number of features drive the signal.</strong> V14, V10, V4, V17, and V12 consistently emerge as most important, suggesting fraud has a distinct statistical signature.</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    Analysis by Priank Ravichandar &middot; <a href="https://github.com/priankr/fraud-detection-machine-learning" target="_blank" rel="noopener">View on GitHub</a> &middot; Data from <a href="https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud" target="_blank" rel="noopener">Kaggle</a>
+  </div>
+</footer>
+
+<script>
+// -- Chart defaults --
+Chart.defaults.color = '#ffffff';
+Chart.defaults.borderColor = 'rgba(71,85,105,.3)';
+Chart.defaults.font.family = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
+Chart.defaults.plugins.legend.labels.padding = 16;
+Chart.defaults.plugins.tooltip.backgroundColor = '#1e293b';
+Chart.defaults.plugins.tooltip.borderColor = '#475569';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.cornerRadius = 8;
+Chart.defaults.elements.point.radius = 0;
+Chart.defaults.elements.point.hoverRadius = 4;
+Chart.defaults.elements.line.tension = 0.3;
+
+const RED = '#f87171', ORANGE = '#fb923c', AMBER = '#fbbf24', YELLOW = '#fde047';
+
+// 1. CLASS DISTRIBUTION (doughnut)
+new Chart(document.getElementById('classChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Legitimate (284,315)', 'Fraudulent (492)'],
+    datasets: [{ data: [284315, 492], backgroundColor: [AMBER, RED], borderWidth: 0, spacing: 2 }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: {
+        callbacks: {
+          label: ctx => {
+            const pct = ctx.parsed === 492 ? '0.173%' : '99.827%';
+            return `${ctx.label}: ${ctx.parsed.toLocaleString()} (${pct})`;
+          }
+        }
+      }
+    }
+  }
+});
+
+// 2. SMOTE
+new Chart(document.getElementById('smoteChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Before SMOTE', 'After SMOTE'],
+    datasets: [
+      { label: 'Legitimate', data: [227451, 227451], backgroundColor: AMBER },
+      { label: 'Fraud', data: [394, 227451], backgroundColor: RED }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom' } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { title: { display: true, text: 'Samples' }, ticks: { callback: v => v >= 1000 ? (v/1000)+'k' : v } }
+    }
+  }
+});
+
+// 3. AMOUNT DISTRIBUTION
+new Chart(document.getElementById('amountChart'), {
+  type: 'bar',
+  data: {
+    labels: [10,30,50,70,90,110,130,150,170,190,210,230,250,270,290,310,330,350,370,390,410,430,450,470,490,510,530,550,570,590,610,630,650,670,690,710,730,750,770,790,810,830,850,870,890,910,930,950,970,990],
+    datasets: [
+      {
+        label: 'Legitimate',
+        data: [0.024319,0.006973,0.004216,0.002783,0.002056,0.001477,0.001121,0.001067,0.000717,0.000598,0.000546,0.000419,0.000385,0.000308,0.000298,0.000273,0.000198,0.000203,0.000163,0.000162,0.000147,0.000118,0.000114,0.000095,0.000086,0.000145,0.000077,0.000075,0.000065,0.000069,0.000068,0.000055,0.00005,0.000046,0.000043,0.000048,0.000037,0.000038,0.000034,0.000034,0.000035,0.000041,0.000026,0.000022,0.000023,0.000027,0.000019,0.000022,0.000019,0.000043],
+        backgroundColor: 'rgba(251,191,36,.5)', borderColor: AMBER, borderWidth: 1
+      },
+      {
+        label: 'Fraud',
+        data: [0.028054,0.002484,0.00176,0.000932,0.004244,0.001967,0.000932,0.000518,0.000518,0.000725,0.000414,0.000414,0.000621,0.000518,0.000311,0.000725,0.000414,0.000621,0.000311,0.000104,0,0.000104,0.000414,0,0.000207,0.000311,0.000104,0.000104,0.000104,0.000104,0.000104,0.000207,0.000104,0.000104,0,0.000104,0.000621,0,0.000207,0,0.000104,0.000207,0,0,0,0,0.000104,0,0,0.000104],
+        backgroundColor: 'rgba(248,113,113,.5)', borderColor: RED, borderWidth: 1
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom' } },
+    scales: {
+      x: { title: { display: true, text: 'Amount ($)' }, grid: { display: false }, ticks: { maxTicksLimit: 10 } },
+      y: { title: { display: true, text: 'Density' } }
+    }
+  }
+});
+
+// 4. HOURLY FRAUD RATE
+new Chart(document.getElementById('hourlyChart'), {
+  type: 'bar',
+  data: {
+    labels: Array.from({length:24},(_,i)=>i+':00'),
+    datasets: [{
+      label: 'Fraud Rate (%)',
+      data: [0.0862,0.1573,1.7004,0.4053,0.714,0.8107,0.2597,0.3074,0.2097,0.0374,0.1158,0.1905,0.2,0.1332,0.0694,0.1548,0.1734,0.1562,0.1738,0.1728,0.0938,0.143,0.052,0.1354],
+      backgroundColor: ctx => ctx.parsed && ctx.parsed.y > 0.4 ? 'rgba(248,113,113,.7)' : 'rgba(251,146,60,.5)',
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `Fraud rate: ${ctx.parsed.y.toFixed(3)}%` } } },
+    scales: {
+      x: { title: { display: true, text: 'Hour of Day' }, grid: { display: false }, ticks: { maxTicksLimit: 12 } },
+      y: { title: { display: true, text: 'Fraud Rate (%)' }, beginAtZero: true }
+    }
+  }
+});
+
+// 5. CORRELATION
+(() => {
+  const feats = ['V17','V14','V12','V10','V16','V3','V7','V11','V4','V18'];
+  const vals = [-0.3265,-0.3025,-0.2606,-0.2169,-0.1965,-0.193,-0.1873,0.1549,0.1334,-0.1115];
+  new Chart(document.getElementById('corrChart'), {
+    type: 'bar',
+    data: {
+      labels: feats,
+      datasets: [{ label: 'Correlation with Fraud', data: vals, backgroundColor: vals.map(v => v < 0 ? 'rgba(251,191,36,.6)' : 'rgba(248,113,113,.6)'), borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { title: { display: true, text: 'Correlation Coefficient' }, min: -0.4, max: 0.25 },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+})();
+
+// 6. MODEL METRICS BAR
+new Chart(document.getElementById('metricsChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Logistic Regression', 'Random Forest', 'XGBoost'],
+    datasets: [
+      { label: 'ROC-AUC', data: [0.9706, 0.9779, 0.9761], backgroundColor: AMBER, borderRadius: 4 },
+      { label: 'AUPRC', data: [0.7281, 0.8553, 0.8477], backgroundColor: ORANGE, borderRadius: 4 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom' } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { min: 0.5, max: 1.0, title: { display: true, text: 'Score' } }
+    }
+  }
+});
+
+// 7. DETECTION BAR
+new Chart(document.getElementById('detectionChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Logistic Reg.', 'Random Forest', 'XGBoost', 'Isolation Forest'],
+    datasets: [
+      { label: 'Fraud Caught', data: [90, 79, 86, 34], backgroundColor: YELLOW, borderRadius: 4 },
+      { label: 'Missed Fraud', data: [8, 19, 12, 64], backgroundColor: RED, borderRadius: 4 },
+      { label: 'False Alarms', data: [1534, 14, 142, 70], backgroundColor: ORANGE, borderRadius: 4 }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom' } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { type: 'logarithmic', title: { display: true, text: 'Count (log scale)' }, min: 1 }
+    }
+  }
+});
+
+// 8. ROC CURVES
+(() => {
+  const lr = {fpr:[0,0.00019,0.00021,0.00025,0.00028,0.0004,0.00072,0.00234,0.0058,0.01572,0.02323,0.031,0.03816,0.05364,0.08067,0.09764,0.13247,0.17051,0.18965,0.20897,0.26769,0.34204,0.39192,0.48361,0.54593,0.62649,0.72357,0.80425,0.87405,0.91012,0.95887,0.99026,1],tpr:[0,0.55102,0.61224,0.78571,0.79592,0.81633,0.84694,0.88776,0.88776,0.89796,0.90816,0.91837,0.91837,0.91837,0.92857,0.93878,0.93878,0.94898,0.94898,0.94898,0.94898,0.95918,0.97959,0.97959,0.97959,0.9898,0.9898,0.9898,1,1,1,1,1]};
+  const rf = {fpr:[0,0.00002,0.00004,0.00005,0.00012,0.00019,0.00028,0.00037,0.00044,0.00053,0.00062,0.00076,0.00093,0.00135,0.00192,0.00292,0.00419,0.00616,0.01004,0.01982,0.05909,0.14818,1],tpr:[0,0.32653,0.58163,0.73469,0.79592,0.80612,0.81633,0.84694,0.85714,0.86735,0.88776,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.90816,0.91837,0.93878,0.96939,1]};
+  const xg = {fpr:[0,0.00009,0.00053,0.00716,0.03216,0.05615,0.07261,0.08429,0.10914,0.15548,0.18947,0.23271,0.27265,0.30089,0.35091,0.40133,0.44517,0.49713,0.55336,0.61021,0.66044,0.71173,0.76016,0.80423,0.85555,0.90579,0.95243,0.99676],tpr:[0,0.69388,0.83673,0.88776,0.91837,0.92857,0.93878,0.94898,0.95918,0.95918,0.95918,0.95918,0.95918,0.96939,0.96939,0.97959,0.97959,0.97959,0.9898,0.9898,0.9898,0.9898,0.9898,0.9898,0.9898,1,1,1]};
+
+  function toPoints(obj) { return obj.fpr.map((f,i) => ({x:f, y:obj.tpr[i]})); }
+
+  new Chart(document.getElementById('rocChart'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        { label: 'Random Forest (0.978)', data: toPoints(rf), showLine: true, borderColor: YELLOW, borderWidth: 2, backgroundColor: 'transparent' },
+        { label: 'XGBoost (0.976)', data: toPoints(xg), showLine: true, borderColor: ORANGE, borderWidth: 2, backgroundColor: 'transparent' },
+        { label: 'Logistic Reg. (0.971)', data: toPoints(lr), showLine: true, borderColor: RED, borderWidth: 2, backgroundColor: 'transparent' },
+        { label: 'Random Guess', data: [{x:0,y:0},{x:1,y:1}], showLine: true, borderColor: '#475569', borderWidth: 1, borderDash: [5,5], backgroundColor: 'transparent', pointRadius: 0 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        x: { title: { display: true, text: 'False Positive Rate' }, min: 0, max: 1 },
+        y: { title: { display: true, text: 'True Positive Rate' }, min: 0, max: 1 }
+      }
+    }
+  });
+})();
+
+// 9. PR CURVES
+(() => {
+  const rf = {precision:[0.00172,0.01115,0.04782,0.10337,0.20091,0.26994,0.37931,0.4467,0.53333,0.59864,0.65672,0.68217,0.71311,0.73913,0.75,0.77064,0.79048,0.81373,0.83333,0.85106,0.87778,0.90698,0.91667,0.93827,0.95,0.96154,0.9726,0.97222,0.9697,0.98148,0.98,0.9697,1],recall:[1,0.96939,0.91837,0.90816,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.88776,0.86735,0.85714,0.85714,0.84694,0.84694,0.81633,0.80612,0.80612,0.79592,0.78571,0.77551,0.77551,0.76531,0.72449,0.71429,0.65306,0.54082,0.5,0.32653,0]};
+  const xg = {precision:[0.00172,0.00181,0.00197,0.00217,0.00248,0.00293,0.00354,0.00442,0.00574,0.00773,0.01066,0.01561,0.0224,0.03372,0.05676,0.11946,0.4456],recall:[1,1,1,0.9898,0.9898,0.9898,0.97959,0.97959,0.97959,0.96939,0.96939,0.95918,0.95918,0.95918,0.95918,0.95918,0.87755]};
+  const lr = {precision:[0.00172,0.0018,0.00192,0.00211,0.00243,0.00286,0.00351,0.00442,0.00574,0.00791,0.01115,0.01655,0.02563,0.04314,0.07149,0.13293,0.83871],recall:[1,1,1,0.9898,0.9898,0.9898,0.97959,0.97959,0.97959,0.96939,0.95918,0.94898,0.94898,0.93878,0.91837,0.89796,0.79592]};
+
+  function toPoints(obj) { return obj.recall.map((r,i) => ({x:r, y:obj.precision[i]})); }
+
+  new Chart(document.getElementById('prChart'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        { label: 'Random Forest (0.855)', data: toPoints(rf), showLine: true, borderColor: YELLOW, borderWidth: 2, backgroundColor: 'transparent' },
+        { label: 'XGBoost (0.848)', data: toPoints(xg), showLine: true, borderColor: ORANGE, borderWidth: 2, backgroundColor: 'transparent' },
+        { label: 'Logistic Reg. (0.728)', data: toPoints(lr), showLine: true, borderColor: RED, borderWidth: 2, backgroundColor: 'transparent' },
+        { label: 'Baseline (0.002)', data: [{x:0,y:0.00172},{x:1,y:0.00172}], showLine: true, borderColor: '#475569', borderWidth: 1, borderDash: [5,5], backgroundColor: 'transparent', pointRadius: 0 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        x: { title: { display: true, text: 'Recall' }, min: 0, max: 1 },
+        y: { title: { display: true, text: 'Precision' }, min: 0, max: 1.05 }
+      }
+    }
+  });
+})();
+
+// 10. THRESHOLD
+(() => {
+  const t=[0,0.01,0.02,0.03,0.04,0.05,0.06,0.07,0.08,0.09,0.1,0.11,0.12,0.13,0.14,0.15,0.16,0.17,0.18,0.19,0.2,0.21,0.22,0.23,0.24,0.26,0.27,0.28,0.29,0.3,0.32,0.33,0.34,0.35,0.36,0.38,0.39,0.4,0.41,0.42,0.43,0.45,0.48,0.5,0.51,0.54,0.55,0.56,0.57,0.58,0.6,0.61,0.66,0.67,0.69,0.71,0.72,0.78,0.79,0.81,0.82,0.83,0.88,0.89,0.9,0.91,0.92,0.93,0.94,0.95,0.97,0.98,0.99,1];
+  const p=[0.00172,0.01115,0.02665,0.04782,0.07319,0.10337,0.13485,0.16792,0.20091,0.22622,0.26994,0.30769,0.34646,0.37931,0.41509,0.4467,0.47826,0.50867,0.53333,0.56774,0.59864,0.62411,0.64234,0.65672,0.66667,0.67176,0.68217,0.696,0.71311,0.71667,0.72881,0.73913,0.74336,0.75,0.77064,0.76852,0.7757,0.79048,0.79808,0.81373,0.81188,0.82828,0.83333,0.85106,0.84946,0.8587,0.86813,0.87778,0.89773,0.89655,0.90698,0.91765,0.91667,0.91566,0.92683,0.93827,0.95,0.96154,0.96104,0.96,0.9726,0.97222,0.97183,0.97143,0.97059,0.97015,0.9697,0.96721,0.9661,0.98148,0.98113,0.98,0.97727,0.9697];
+  const r=[1,0.96939,0.93878,0.91837,0.90816,0.90816,0.90816,0.90816,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.89796,0.88776,0.88776,0.87755,0.87755,0.86735,0.85714,0.85714,0.85714,0.84694,0.84694,0.84694,0.84694,0.84694,0.83673,0.83673,0.81633,0.81633,0.80612,0.80612,0.80612,0.80612,0.80612,0.79592,0.79592,0.79592,0.78571,0.77551,0.77551,0.77551,0.77551,0.76531,0.7551,0.73469,0.72449,0.71429,0.70408,0.69388,0.67347,0.66327,0.65306,0.60204,0.58163,0.54082,0.53061,0.5,0.43878,0.32653];
+  const f=[0.00343,0.02204,0.05183,0.09091,0.13546,0.18561,0.23483,0.28344,0.32836,0.3614,0.41509,0.45833,0.5,0.53333,0.56774,0.59661,0.62411,0.64945,0.6692,0.69565,0.71837,0.7364,0.74894,0.75862,0.76522,0.76856,0.77533,0.78027,0.79091,0.78899,0.7963,0.79812,0.79621,0.8,0.81159,0.80583,0.80976,0.81773,0.82178,0.83,0.82412,0.83249,0.82474,0.83333,0.82723,0.83158,0.83598,0.84043,0.84946,0.84324,0.84783,0.85246,0.84615,0.83978,0.84444,0.84916,0.85393,0.85227,0.84571,0.83237,0.83041,0.82353,0.81657,0.80952,0.79518,0.78788,0.78049,0.74214,0.72611,0.69737,0.68874,0.66216,0.60563,0.48855];
+
+  new Chart(document.getElementById('thresholdChart'), {
+    type: 'line',
+    data: {
+      labels: t,
+      datasets: [
+        { label: 'Precision', data: p, borderColor: AMBER, borderWidth: 2, fill: false },
+        { label: 'Recall', data: r, borderColor: RED, borderWidth: 2, fill: false },
+        { label: 'F1 Score', data: f, borderColor: YELLOW, borderWidth: 2.5, fill: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        annotation: undefined
+      },
+      scales: {
+        x: { title: { display: true, text: 'Classification Threshold' }, ticks: { maxTicksLimit: 10 } },
+        y: { title: { display: true, text: 'Score' }, min: 0, max: 1.05 }
+      }
+    },
+    plugins: [{
+      afterDraw(chart) {
+        const xScale = chart.scales.x;
+        const yScale = chart.scales.y;
+        const ctx = chart.ctx;
+        // Find pixel for threshold 0.72
+        const idx = t.indexOf(0.72);
+        if (idx < 0) return;
+        const xPx = xScale.getPixelForValue(idx);
+        ctx.save();
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.moveTo(xPx, yScale.top);
+        ctx.lineTo(xPx, yScale.bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Optimal: 0.72', xPx, yScale.top - 6);
+        ctx.restore();
+      }
+    }]
+  });
+})();
+
+// 11. RF FEATURE IMPORTANCE
+(() => {
+  const feats = ['V14','V10','V4','V17','V12','V11','V3','V16','V2','V7','V8','V27','V9','V21','V19'];
+  const vals = [0.22159,0.11096,0.10794,0.08551,0.07928,0.07189,0.06577,0.036,0.02663,0.02518,0.01538,0.01306,0.01265,0.01249,0.01042];
+  new Chart(document.getElementById('rfImpChart'), {
+    type: 'bar',
+    data: {
+      labels: feats.slice().reverse(),
+      datasets: [{ label: 'Importance', data: vals.slice().reverse(), backgroundColor: 'rgba(251,146,60,.6)', borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { title: { display: true, text: 'Importance' } }, y: { grid: { display: false } } }
+    }
+  });
+})();
+
+// 12. XGB FEATURE IMPORTANCE
+(() => {
+  const feats = ['V14','V4','V12','V8','V13','Amount','V1','V18','V9','V17','V26','V10','Hour','V25','V3'];
+  const vals = [0.55198,0.04726,0.03597,0.03326,0.02259,0.01813,0.01805,0.01759,0.01656,0.01576,0.01531,0.01505,0.01447,0.01421,0.0136];
+  new Chart(document.getElementById('xgbImpChart'), {
+    type: 'bar',
+    data: {
+      labels: feats.slice().reverse(),
+      datasets: [{ label: 'Importance', data: vals.slice().reverse(), backgroundColor: 'rgba(251,146,60,.6)', borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { title: { display: true, text: 'Importance' } }, y: { grid: { display: false } } }
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
