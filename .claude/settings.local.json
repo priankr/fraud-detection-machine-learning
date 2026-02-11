@@ -3,7 +3,11 @@
     "allow": [
       "Bash(git init:*)",
       "Bash(git remote add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git mv:*)",
+      "Bash(python:*)",
+      "Bash(del \"c:\\\\Users\\\\Priank Ravichandar\\\\Documents\\\\Python\\\\Projects\\\\Fraud Detection Machine Learning\\\\generate_notebook.py\")",
+      "Bash(git commit:*)"
     ]
   }
 }
